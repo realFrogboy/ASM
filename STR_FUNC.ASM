@@ -32,6 +32,7 @@ BIAS    equ 48d
 .putch      macro
             nop
 
+            push offset NSTR
             call itoa
             mov dx, NSTR
 
@@ -72,9 +73,10 @@ Nope:       push offset COPY
             .printf
             .separation
 
+            push offset val
             call atoi
             add val, 1234d
-            
+
             mov ax, val
             .putch
             .separation
@@ -86,6 +88,30 @@ Nope:       push offset COPY
             mov ax, CmpRES
             .putch
 
+;-----------------------------------------------
+
+            .separation
+            .separation
+            .separation
+
+            push offset COPY1
+            call Strcpy
+            push COPY1
+
+            push offset COPY2
+            call Strcpy
+
+            pop si
+            mov di, COPY2
+            
+            push offset CmpRES
+            call Strcmp
+
+            mov ax, CmpRES
+            .putch
+
+
+
             mov ax, 4c00h
             int 21h
 
@@ -95,7 +121,7 @@ Nope:       push offset COPY
 ;Entry: SI = addr of str
 ;Exit:  LEN
 ;Note:  String should be ended by '$' 
-;Destr: AL BX 
+;Destr: AL BX DI
 ;------------------------------------------------
 Strlen			proc
                 push bp
@@ -125,7 +151,7 @@ Strlen			proc
 ;       DH = symbol
 ;Exit:  POS
 ;Note:  String should be ended by '$' 
-;Destr: AL BX DH
+;Destr: AL BX DH DI
 ;------------------------------------------------
 Strchr			proc
                 push bp
@@ -165,7 +191,7 @@ Strchr			proc
 ;Entry: SI = addr of str
 ;Exit:  COPY
 ;Note:  String should be ended by '$' 
-;Destr: AL BX CX 
+;Destr: AL BX CX
 ;------------------------------------------------
 Strcpy			proc
                 push bp
@@ -183,8 +209,8 @@ Strcpy			proc
                 mov copystr[bx], al
 				loop @@Copy
 
-                mov di, [bp + 4]
-				mov word ptr [di], offset copystr
+                mov bx, [bp + 4]
+				mov word ptr [bx], offset copystr
 
                 pop bp
 				ret 2
@@ -201,6 +227,8 @@ Strcpy			proc
 ;Destr: AX BX CX DX
 ;------------------------------------------------
 itoa            proc
+                push bp
+                mov bp, sp
 
                 mov cx, DIGIT 
                 xor bx, bx        
@@ -233,9 +261,11 @@ itoa            proc
                 pop bx
                 mov iStr[bx], '$'     ; puts termination symb at the end of str
 
-                mov NSTR, offset iStr
+                mov bx, [bp + 4]
+                mov [bx], offset iStr
 
-                ret
+                pop bp
+                ret 2
                 endp
 
 
@@ -246,11 +276,12 @@ itoa            proc
 ;       DI = addr of the 2nd str
 ;Exit:  CmpRES
 ;Note:  Strings should be ended by '$'
-;Destr: AX BX CX 
+;Destr: AX BX CX DX
 ;------------------------------------------------
 Strcmp          proc
                 push bp
                 mov bp, sp
+                mov dx, di
 
                 push offset LEN
                 call Strlen 
@@ -258,7 +289,7 @@ Strcmp          proc
                 mov ah, byte ptr LEN
 
                 push si
-                mov si, di
+                mov si, dx
                 
                 push offset LEN
                 call Strlen
@@ -266,6 +297,7 @@ Strcmp          proc
                 mov al, byte ptr LEN
 
                 pop si
+                mov di, dx
 
                 cmp ah, al
                 jb @@First
@@ -312,16 +344,20 @@ Strcmp          proc
 ;Exit:  VAL
 ;Note:  1. String should be ended by '$'
 ;       2. Nuber should be < 65536
-;Destr: AX BX CX DX
+;Destr: AX BX CX DX DI
 ;------------------------------------------------
 atoi            proc
-
-                mov VAL, 0h
+                push bp
+                mov bp, sp
 
                 push offset LEN
                 call Strlen             ; LEN = lenght of str
+
                 mov cx, LEN             ; initialization of counter
                 xor dx, dx              ; number digit
+
+                mov di, [bp + 4]
+                mov word ptr [di], 0h
 
 @@NextSmb:      xor ax, ax
 
@@ -335,8 +371,9 @@ atoi            proc
                 push cx                 ; save CX
                 mov cx, dx              ; dx - counter (number digit)
                 jcxz @@ZeroDigit
+
                 mov bx, DIGIT
-                push dx                 ;save DX before mul
+                push dx                 ; save DX before mul
 
 @@Mult:         mul bx                  ; reduction to the required digit
                 loop @@Mult
@@ -347,26 +384,29 @@ atoi            proc
 
                 pop cx                  ; ret CX
 
-                add word ptr VAL, ax
+                add word ptr [di], ax
                 loop @@NextSmb
 
-                ret
+                pop bp
+                ret 2
                 endp
 
 
 ;------------------------------------------------
 
 mystr   db '1234$'
-cmpstrg db '1234$'
+cmpstrg db '1225$'
 copystr db 10 dup(?)
 tmp     db 6 dup(?)
 iStr    db 6 dup(?)
 
-POS     dw 0000h
-LEN     dw 0000h
-VAL     dw 0000h
-COPY    dw 0000h
-NSTR    dw 0000h
+POS     dw ?
+LEN     dw ?
+VAL     dw ?
+COPY    dw ?
+COPY1   dw ?
+COPY2   dw ?
+NSTR    dw ?
 CmpRES  dw ?
 
 NoSymb  db 'There is no such symbol int the str$'
