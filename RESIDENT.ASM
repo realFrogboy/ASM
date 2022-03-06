@@ -3,70 +3,60 @@
 .code
 org 100h
 
-start:                  cli
+start:      mov ax, 2509h           ; Set new ISR 09h
+            mov dx, offset New09    ; DS = CS: model tiny
+            int 21h
 
-                        xor di, di
-                        mov es, di
+            ;in al, 61h
+            ;or al, 3
+            ;out 61h, al
 
-                        mov di, 09h * 4
+            ;in al, 61h
+            ;and al, not 3
+            ;out 61h, al
 
-                        mov ax, es:[di]
-                        mov Oldosoft, ax
+            mov ax, 3100h           ; TSR
+            mov dx, offset EOP      ; End of programm
+            shr dx, 4
+            inc dx
+            int 21h
 
-                        mov ax, es:[di+2]
-                        mov OldoSeg, ax
+            mov ax, 4c00h
+            int 21h
 
-                        mov es:[di], offset New09
+New09       proc
+            push ax di es
 
-                        push cs
-                        pop ax
-                        mov es:[di+2], ax
+            push 0b800h
+            pop es
 
-                        sti
+            mov di, (12*80 + 40) * 2
+            mov ah, 1eh
 
-WaitEsc:                in al, 60h
-                        cmp al, 1
-                        jne WaitEsc
-                        
-                        mov ax, 3100h
-                        mov dx, offset EOP
-                        shr dx, 4
-                        inc dx
-                        int 21h
+            in al, 60h
+            stosw
 
-;------------------------------------------------
+            mov al, 0b6h
+            out 43h, al
+            mov al, 90h
+            out 42h, al
+            mov al, 0ah
+            out 42h, al
 
-New09                   proc
-                        push ax di es
-                        
-                        mov di, 0b800h
-                        mov es, di
+            in al, 61h
+            or al, 81h
+            xor al, 03h
+            out 61h, al
+            and al, not 80h
+            out 61h, al
 
-                        mov di, (5*80 + 40) * 2
-                        mov ah, 0eh
-                        cld
+            mov al, 20h
+            out 20h, al
 
-Next:                   in al, 60h
-                        stosw
-
-                        in al, 61h
-                        mov ah, al
-                        or al, 80h
-                        out 61h, al
-                        mov al, ah
-                        out 61h, al
-
-                        mov al, 20h
-                        out 20h, al
-
-                        pop es di ax
-                        iret
-
-            db 0eah
-Oldosoft    dw 0
-OldoSeg     dw 0
-                        endp
+            pop es di ax
+            iret
+            endp
 
 EOP:
 
-end                     start
+end         start
