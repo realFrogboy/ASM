@@ -1,15 +1,16 @@
 .186
 .model tiny
 .code
+locals
 org 100h
+
+;------------------------------------------------
 
 VIDEOSEG        equ 0b800h
 
+;------------------------------------------------
+
 start:          
-                mov ax, 3508h
-                int 21h
-                mov OldSeg, es
-                mov OldOff, bx
 
                 cli
                 mov ax, 2509h           ; Set new ISR 09h
@@ -18,7 +19,7 @@ start:
                 sti
 
                 cli
-                mov ax, 2572h
+                mov ax, 2508h
                 mov dx, offset New08
                 int 21h
                 sti
@@ -35,10 +36,10 @@ start:
 ;------------------------------------------------                
 
 New09           proc
-                push ax dx di ds es
+                push ax di es
        
-                push 0b800h
-                pop es
+                mov ax, VIDEOSEG
+                mov es, ax
 
                 mov di, (12*80 + 40) * 2
                 mov ah, 1eh
@@ -46,37 +47,28 @@ New09           proc
                 in al, 60h
                 stosw
 
-                cmp al, 01fh
-                je Start08
+                cmp al, 2h
+                je TurnOn08
 
-                cmp al, 33h
-                je Finish08
+                cmp al, 3h
+                je TurnOff08
 
-                jmp EndInt
+                jmp @@Skip
 
-Start08:      
-                cli
-                mov ax, 2572h
-                mov dx, offset New08
-                int 21h
-                sti
+TurnOn08:
+                call RememberVideo
+                mov FLAG, 1
+                jmp @@Skip
 
-                jmp EndInt
+TurnOff08:
+                mov FLAG, 0
+                call ReturnVideo
 
-Finish08:       
-                cli
-                mov ax, 2572h
-                mov dx, OldOff
-                mov ds, OldSeg
-                int 21h
-                sti
-
-
-EndInt:         
+@@Skip:          
                 mov al, 20h
                 out 20h, al
 
-                pop es ds di dx ax
+                pop es di ax
                 iret
                 endp
 
@@ -85,10 +77,19 @@ EndInt:
 New08           proc
                 push ax di es
 
-                in al, 61h
-                or al, 3
-                out 61h, al
+                cmp FLAG, 1
+                jne @@Skip
+                
+                mov ax, VIDEOSEG
+                mov es, ax
 
+                mov di, (5*80 + 40) * 2
+                mov ah, 0eh
+                
+                in al, 60h
+                stosw
+
+@@Skip:         
                 mov al, 20h
                 out 20h, al
 
@@ -96,9 +97,43 @@ New08           proc
                 iret
                 endp
 
+;------------------------------------------------
 
-OldSeg          dw 0
-OldOff          dw 0
+RememberVideo   proc
+                push ax di es
+
+                mov ax, VIDEOSEG
+                mov es, ax
+
+                mov di, (5*80 + 40) * 2
+
+                mov ax, es:[di]
+                mov Video, ax
+
+                pop es di ax
+                ret
+                endp
+
+;------------------------------------------------
+
+ReturnVideo     proc
+                push ax di es 
+
+                mov ax, VIDEOSEG
+                mov es, ax
+
+                mov di, (5*80 + 40) * 2
+
+                mov ax, Video
+                stosw
+
+                pop es di ax
+                ret
+                endp
+
+
+FLAG        db  0
+Video       dw  ?
 
 EOP:
 end             start
