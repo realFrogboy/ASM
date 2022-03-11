@@ -3,11 +3,8 @@ section .text
                 global _start
 
 _start:
-                mov rsi, str
-                mov rdi, 't'
-
-                push rdi
-                push rsi
+                push 't'
+                push str
                 call printf
                 add rsp, 16
 
@@ -29,14 +26,60 @@ printf:
                 mov rsi, [rbp + 16]         ; get addr of str from stack
                 push len                    ; var for lentgh
                 call Strlen                 ; len = strlen(ESI)
-                add rsp, 8
+                add rsp, 8                  ; clear stack
 
-                mov rsi, [rbp + 16]         ; get addr of str from stack
-                xor rdx, rdx                
-                mov dh, '%'                 ; smbl to find in str(RSI)
-                push positions              ; 
-                call Strchr
-                add rsp, 8
+                mov rdi, positions          ; RDI = addr positions
+                xor rbx, rbx
+nextPos:
+                push rdi                    ; save RDI
+                push rbx                    ; save RBX
+
+                xor rdx, rdx                ; clear RDX
+                mov dh, '%'                 ; smlb to find
+
+                push pos                    ; var for position
+                call Strchr                 ; pos = strchr(RSI, %)
+                add rsp, 8                  ; clear stack
+
+                pop rbx                     ; ret RBX
+                pop rdi                     ; ret RDI
+                
+                mov cx, [pos]               ; CX = pos
+
+                mov ax, -1                  ;
+                cmp cx, ax                  ; check string for % availability 
+                je @break                   ;
+
+                add rsi, rcx                ;
+                inc rsi                     ; address offset
+
+                cmp rbx, 0
+                je bxz
+
+
+                push rbx                    ; save RBX
+
+nextTerm:                                   ; 
+                dec rbx                     ; 
+                add cx, [rdi + rbx*2]       ;  find position from the begin of str
+                                            ;  
+                cmp  rbx, 0                 ; 
+                jne nextTerm                ;
+
+                pop rbx                     ; ret RBX
+
+bxz:                
+                mov [rdi + rbx*2], cx
+                inc rbx
+
+                jmp nextPos
+
+@break:
+                mov rcx, [rdi + (rbx-1)*2]
+                sub rsi, rcx
+                dec rsi
+
+                jrcxz def
                 
 
                 mov rbx, [positions]
@@ -151,7 +194,8 @@ Strchr:
                 ret
 
 section .data
-len     dw  0
-str:    db  "hello %c$"
-positions   dw  0
+len         dw  0
+str:        db  "hello %c friend$"
+positions   dw  0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+pos         dw  0
  
