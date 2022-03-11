@@ -3,7 +3,9 @@ section .text
                 global _start
 
 _start:
-                mov esi, str
+                xor rdx, rdx
+
+                mov rsi, str
                 mov dh, '%'
                 push POS
                 call Strchr
@@ -30,13 +32,15 @@ _start:
 ;       DH = symbol
 ;Exit:  POS
 ;Note:  String should be ended by '$' 
-;Destr: AL BX DH DI
+;Destr: RAX RBX DH RDI
 ;------------------------------------------------
 Strchr:			
                 push rbp
                 mov rbp, rsp
 
-                xor bx, bx
+                xor rbx, rbx
+                xor rax, rax
+                xor rdi, rdi
 
 @@Count:		    
                 inc bx
@@ -46,7 +50,7 @@ Strchr:
                 cmp al, dh
                 jne @@Count
 
-                sub si, bx
+                sub rsi, rbx
                 dec bx
 
                 mov rdi, [rbp + 16]
@@ -56,7 +60,7 @@ Strchr:
                 ret 2h
 
 @@break:		
-                sub si, bx
+                sub rsi, rbx
                         
                 mov rdi, [rbp + 16]
                 mov bx, -1
