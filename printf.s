@@ -1,3 +1,12 @@
+%macro  putch 0
+
+        mov rax, 1
+        mov rdi, 1
+        mov rdx, 1
+        syscall
+
+%endmacro
+
 section .text
 
                 global _start
@@ -7,12 +16,6 @@ _start:
                 push str
                 call printf
                 add rsp, 16
-
-                mov rsi, str	
-                mov dx, [len]
-                mov rdi, 1	        ;file descriptor (stdout)
-                mov rax, 1	        ;system call number (sys_write)
-                syscall  	        ;call kernel
 
                 mov rax, 0x3c
                 xor rdi, rdi
@@ -28,91 +31,51 @@ printf:
                 call Strlen                 ; len = strlen(ESI)
                 add rsp, 8                  ; clear stack
 
-                mov rdi, positions          ; RDI = addr positions
-                xor rbx, rbx
-nextPos:
-                push rdi                    ; save RDI
-                push rbx                    ; save RBX
+                mov cx, [len]
 
-                xor rdx, rdx                ; clear RDX
-                mov dh, '%'                 ; smlb to find
+nextSmbl:
+                xor rax, rax
+                lodsb
 
-                push pos                    ; var for position
-                call Strchr                 ; pos = strchr(RSI, %)
-                add rsp, 8                  ; clear stack
+                cmp al, '%'
+                jne putSmbl
 
-                pop rbx                     ; ret RBX
-                pop rdi                     ; ret RDI
-                
-                mov cx, [pos]               ; CX = pos
-
-                mov ax, -1                  ;
-                cmp cx, ax                  ; check string for % availability 
-                je @break                   ;
-
-                add rsi, rcx                ;
-                inc rsi                     ; address offset
-
-                cmp rbx, 0
-                je bxz
-
-
-                push rbx                    ; save RBX
-
-nextTerm:                                   ; 
-                dec rbx                     ; 
-                add cx, [rdi + rbx*2]       ;  find position from the begin of str
-                                            ;  
-                cmp  rbx, 0                 ; 
-                jne nextTerm                ;
-
-                pop rbx                     ; ret RBX
-
-bxz:                
-                mov [rdi + rbx*2], cx
-                inc rbx
-
-                jmp nextPos
-
-@break:
-                mov rcx, [rdi + (rbx-1)*2]
-                sub rsi, rcx
-                dec rsi
-
-                jrcxz def
-                
-
-                mov rbx, [positions]
-
-                mov dh, 'c'
-                cmp [rsi + rbx + 1], dh
+                mov al, 'c'
+                cmp [rsi], al
                 je char
 
-                jmp def
+putSmbl:        mov rbx, rsi
+                push cx
 
-char:           
-                mov dh, [rbp + 24]
-                mov [rsi + rbx], dh
+                push ax
+                mov rsi, rsp
+                putch
+                pop ax
 
-                mov cx, [len]
-                sub cx, bx
+                pop cx
+                mov rsi, rbx
+
+                jmp continue
+
+char:
+                mov rbx, rsi
+                push cx
+
+                mov ax, [rbp + 24]
+                push ax
+                mov rsi, rsp
+                putch
+                pop ax
+
+                pop cx
+                mov rsi, rbx
+
+                inc rsi
                 dec cx
 
-                inc bx
+                jmp continue
+continue:       loop nextSmbl       
 
-shiftStr:          
-                inc bx
-
-                mov dh, [rsi + rbx]
-                mov [rsi + rbx - 1], dh
-
-                loop shiftStr
-
-                mov cx, [len]
-                dec cx
-                mov [len], cx
-
-def:            
                 pop rbp
                 ret
                 
@@ -196,6 +159,4 @@ Strchr:
 section .data
 len         dw  0
 str:        db  "hello %c friend$"
-positions   dw  0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-pos         dw  0
  
