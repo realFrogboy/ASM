@@ -67,9 +67,9 @@ PutPos:     mov ax, POS
             .putch
             .separation
 
-Nope:       push offset COPY
+Nope:       push offset copystr1
             call Strcpy
-            mov dx, COPY
+            mov dx, offset copystr1
             .printf
             .separation
 
@@ -94,20 +94,22 @@ Nope:       push offset COPY
             .separation
             .separation
 
-            push offset COPY1
+	        mov si, offset mystr
+            push offset copystr1
             call Strcpy
-            push COPY1
-
-            push offset COPY2
-            call Strcpy
-
-            pop si
-            mov di, COPY2
             
-            push offset CmpRES
+
+	        mov si, offset cmpstrg
+            push offset copystr2
+            call Strcpy
+
+            mov si, offset copystr1
+            mov di, offset copystr2
+            
+            push offset CmpRES1
             call Strcmp
 
-            mov ax, CmpRES
+            mov ax, CmpRES1
             .putch
 
 
@@ -123,25 +125,25 @@ Nope:       push offset COPY
 ;Note:  String should be ended by '$' 
 ;Destr: AL BX DI
 ;------------------------------------------------
-Strlen			proc
-                push bp
-                mov bp, sp
+Strlen		proc
+            push bp
+            mov bp, sp
 
-				xor bx, bx
+		    xor bx, bx
 
-@@Count:		inc bx
-				lodsb
-				cmp al, '$'
-				jne @@Count
+@@Count:	inc bx
+            lodsb
+            cmp al, '$'
+            jne @@Count
 
-                sub si, bx
-				dec bx
-                mov di, [bp + 4]
-				mov word ptr [di], bx
+            sub si, bx
+		    dec bx
+            mov di, [bp + 4]
+		    mov word ptr [di], bx
 
-                pop bp
-                ret 2
-				endp
+            pop bp
+            ret 2
+		    endp
 
 
 ;------------------------------------------------
@@ -153,36 +155,36 @@ Strlen			proc
 ;Note:  String should be ended by '$' 
 ;Destr: AL BX DH DI
 ;------------------------------------------------
-Strchr			proc
-                push bp
-                mov bp, sp
+Strchr		proc
+            push bp
+            mov bp, sp
 
-                xor bx, bx
+            xor bx, bx
 
-@@Count:		inc bx
-				lodsb
-                cmp al, '$'
-                je  @@break
-				cmp al, dh
-				jne @@Count
+@@Count:	inc bx
+		    lodsb
+            cmp al, '$'
+            je  @@break
+            cmp al, dh
+            jne @@Count
 
-                sub si, bx
-                dec bx
+            sub si, bx
+            dec bx
 
-                mov di, [bp + 4]
-				mov word ptr [di], bx
+            mov di, [bp + 4]
+            mov word ptr [di], bx
 
-                pop bp
-                ret 2
+            pop bp
+            ret 2
 
-@@break:		sub si, bx
+@@break:	sub si, bx
                 
-                mov di, [bp + 4]
-                mov word ptr [di], -1
-                
-                pop bp
-                ret 2
-				endp
+            mov di, [bp + 4]
+            mov word ptr [di], -1
+            
+            pop bp
+            ret 2
+            endp
 
 
 ;------------------------------------------------
@@ -200,17 +202,16 @@ Strcpy			proc
                 push offset LEN
 				call Strlen
 
+                mov di, [bp + 4]
+
                 mov cx, LEN
                 inc cx              ; need to put '$' at the end of copystr
                 mov bx, cx
 
 @@Copy:         dec bx
                 mov al, si[bx] 
-                mov copystr[bx], al
+                mov di[bx], al
 				loop @@Copy
-
-                mov bx, [bp + 4]
-				mov word ptr [bx], offset copystr
 
                 pop bp
 				ret 2
@@ -394,20 +395,19 @@ atoi            proc
 
 ;------------------------------------------------
 
-mystr   db '1234$'
-cmpstrg db '1225$'
-copystr db 10 dup(?)
+mystr   db '12340$'
+cmpstrg db '1134$'
+copystr1 db 10 dup(?)
+copystr2 db 10 dup(?)
 tmp     db 6 dup(?)
 iStr    db 6 dup(?)
 
 POS     dw ?
 LEN     dw ?
 VAL     dw ?
-COPY    dw ?
-COPY1   dw ?
-COPY2   dw ?
 NSTR    dw ?
 CmpRES  dw ?
+CmpRES1 dw ?
 
 NoSymb  db 'There is no such symbol int the str$'
 
