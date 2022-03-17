@@ -1,22 +1,15 @@
-%macro  putch 0
-
-        mov rax, 1
-        mov rdi, 1
-        mov rdx, 1
-        syscall
-
-%endmacro
-
 section .text
 
                 global _start
 
 _start:
+                push pstr
                 push 'k'
+                push pstr1
                 push 't'
                 push str
                 call printf
-                add rsp, 24
+                add rsp, 40
 
                 mov rax, 0x3c
                 xor rdi, rdi
@@ -44,49 +37,52 @@ nextSmbl:
 
                 inc rdi
 
-                mov al, 'c'
-                cmp [rsi], al
-                je char
+                xor rbx, rbx
+                mov bl, [rsi]
+                sub bl, 0x63
 
-putSmbl:        mov rbx, rsi
-                push cx
+                mov rdx, [table + rbx*8]
+                jmp rdx
 
-                push ax
-
-                mov rsi, rsp
-                putch
-
-                pop ax
-
-                pop cx
-                mov rsi, rbx
-
+putSmbl:        
+                call putch
                 jmp continue
 
 char:
-                mov rbx, rsi
-                push cx
+                call putChar
+                jmp continue
 
-                mov ax, [rbp + 16 + 8*rdi]
+string:         call putStr
+                jmp continue
+
+continue:       loop nextSmbl  
+
+                pop rbp
+                ret
+
+;------------------------------------------------
+;Insert char in CMD
+;
+;Entry:
+; 
+;Destr:
+;------------------------------------------------
+putch:
                 push rdi
+                push rsi
+                push cx
                 push ax
 
                 mov rsi, rsp
-                putch
+                mov rax, 1
+                mov rdi, 1
+                mov rdx, 1
+                syscall
 
                 pop ax
-                pop rdi
-
                 pop cx
-                mov rsi, rbx
-
-                inc rsi
-                dec cx
-
-                jmp continue
-continue:       loop nextSmbl       
-
-                pop rbp
+                pop rsi
+                pop rdi
                 ret
                 
 
@@ -121,9 +117,56 @@ Strlen:
                 ret
 
 
+;------------------------------------------------
+;Insert char instead of '%c'
+;
+;Entry: RDI = number of val
+; 
+;Destr: AX RDX
+;------------------------------------------------
+putChar:
+                mov al, [rbp + 16 + 8*rdi]
+
+                call putch
+
+                inc rsi
+                dec cx
+
+                ret
+
+
+;------------------------------------------------
+;Insert string instead of '%s'
+;
+;Entry: RDI = number of val
+; 
+;Destr: AX RBX CX RDX RSI
+;------------------------------------------------
+putStr:         
+                mov rbx, [rbp + 16 + 8*rdi]
+
+.nextSmbl:
+                mov al, [rbx]
+                call putch 
+
+                inc rbx
+
+                mov al, '$'
+                cmp [rbx], al
+                jne .nextSmbl
+
+                inc rsi
+                dec cx
+
+                ret
+
+
 
 
 section .data
+pstr:       db  "danya$"
+pstr1:      db  "clown$"
 len         dw  0
-str:        db  "hello %c friend %c how$"
+str:        db  "hello %c friend --%s-- %c how %s!!$"
+table:      dq  char, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, string 
  
