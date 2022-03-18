@@ -1,5 +1,3 @@
-
-DIGIT   equ 10d
 BIAS    equ 48d  
 
 section .text
@@ -7,15 +5,19 @@ section .text
                 global _start
 
 _start:
+                push 7235
+                push 7235
+                push 7235
+                push 7235
                 push pstr
-                push 56789
+                push 5678
                 push 'k'
                 push pstr1
                 push 't'
-                push 5
+                push 7568
                 push str
                 call printf
-                add rsp, 40
+                add rsp, 88
 
                 mov rax, 0x3c
                 xor rdi, rdi
@@ -41,11 +43,16 @@ nextSmbl:
                 cmp al, '%'
                 jne putSmbl
 
-                inc rdi
 
                 xor rbx, rbx
                 mov bl, [rsi]
+
+                cmp bl, '%'
+                je putPercent
+
+
                 sub bl, 0x62
+                inc rdi
 
                 mov rdx, [table + rbx*8]
                 jmp rdx
@@ -64,8 +71,31 @@ string:
                 jmp continue
 
 dec:            
-                call decimal
+                mov bx, 10
+                call putNum
                 jmp continue
+
+oct:
+                mov bx, 8
+                call putNum
+                jmp continue
+
+bin:            
+                mov bx, 2
+                call putNum
+                jmp continue
+
+hexdec:            
+                mov bx, 16
+                call putNum
+                jmp continue 
+
+putPercent:     
+                call putch
+                
+                inc rsi
+                dec cx          
+
 
 continue:       loop nextSmbl  
 
@@ -141,19 +171,21 @@ putStr:
 
 
 ;------------------------------------------------
-;Insert decimal instead of '%d'
+;Insert number instead of '%d' in the currient notation
 ;
 ;Entry: RDI = number of val
+;       BX  = notation (2 8 10 16)
 ; 
 ;Destr: AX RBX CX RDX RSI
 ;------------------------------------------------
-decimal:        
+putNum:        
                 push rcx
 
-                mov ax, [rbp + 16 + 8*rdi]
+                mov rax, [rbp + 16 + 8*rdi]
+                push rbx
                 push dstr
                 call itoa
-                add rsp, 8
+                add rsp, 16
 
                 mov rbx, dstr
 
@@ -162,11 +194,6 @@ decimal:
 
                 ret
 
-
-
-
-
-                
 
 ;------------------------------------------------
 ;Count number of symbols
@@ -202,6 +229,7 @@ Strlen:
 ;Translate int to string
 ;
 ;Entry: AX = number
+;       PUSH = DIGIT (2 8 10 16)
 ;       PUSH = addr of str
 ;Exit:
 ;Note:  Nuber should be < 65536
@@ -210,20 +238,55 @@ Strlen:
 itoa:
                 push rbp
                 mov rbp, rsp
+                push rdi
 
-                mov cx, DIGIT 
+                mov cx, [rbp + 24]
                 xor rbx, rbx        
 
-.Continue:      xor dx, dx
+Continue:       xor rdx, rdx
 
-                div cx              ; DX = AX mod CX, AX = AX div CX
-                add dx, BIAS        ; from int to char
+                div rcx              ; DX = AX mod CX, AX = AX div CX
 
+                cmp rdx, 9
+                ja hexNotation
+
+                add rdx, BIAS        ; from int to char
+                jmp convert
+
+hexNotation:         
+                mov rdi, [hexTbl + (rdx - 10) * 8]
+                jmp rdi
+
+putA:
+                mov dl, 'A' 
+                jmp convert
+
+putB:
+                mov dl, 'B' 
+                jmp convert
+
+putC:
+                mov dl, 'C' 
+                jmp convert
+
+putD:
+                mov dl, 'D' 
+                jmp convert
+
+putE:
+                mov dl, 'E' 
+                jmp convert
+
+putF:
+                mov dl, 'F' 
+
+
+convert:                
                 mov [tmp + rbx], dl     ; DX < 10 -> DL = DX 
                 inc rbx
 
-                cmp ax, 0
-                jne .Continue
+                cmp rax, 0
+                jne Continue
 
                 push rsi
                 push rbx             ; save number of digit in number
@@ -249,15 +312,17 @@ itoa:
 
                 pop rsi
 
+                pop rdi
                 pop rbp
                 ret
 
+
 section .data
-tmp         db  0, 0, 0, 0, 0, 0
-dstr        db  0, 0, 0, 0, 0, 0 
+tmp         db  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 
+dstr        db  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 
 pstr:       db  "danya$"
 pstr1:      db  "clown$"
 len         dw  0
-str:        db  "%d hello %c friend --%s-- %c how %d, %s!!$"
-table:      dq  0, char, dec, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, string 
- 
+str:        db  "%% %x hello %c friend %% --%s-- %c how %d, %s!!EXAPLE%%: %d, oct - %o, bin - %b, hex - %x$"
+table:      dq  bin, char, dec, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, oct, 0, 0, 0, string, 0, 0, 0, 0, hexdec 
+hexTbl:     dq  putA, putB, putC, putD, putE, putF
