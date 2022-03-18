@@ -1,12 +1,18 @@
+
+DIGIT   equ 10d
+BIAS    equ 48d  
+
 section .text
 
                 global _start
 
 _start:
                 push pstr
+                push 56789
                 push 'k'
                 push pstr1
                 push 't'
+                push 5
                 push str
                 call printf
                 add rsp, 40
@@ -39,7 +45,7 @@ nextSmbl:
 
                 xor rbx, rbx
                 mov bl, [rsi]
-                sub bl, 0x63
+                sub bl, 0x62
 
                 mov rdx, [table + rbx*8]
                 jmp rdx
@@ -52,7 +58,13 @@ char:
                 call putChar
                 jmp continue
 
-string:         call putStr
+string:         
+                mov rbx, [rbp + 16 + 8*rdi]
+                call putStr
+                jmp continue
+
+dec:            
+                call decimal
                 jmp continue
 
 continue:       loop nextSmbl  
@@ -84,37 +96,6 @@ putch:
                 pop rsi
                 pop rdi
                 ret
-                
-
-;------------------------------------------------
-;Count number of symbolss
-;
-;Entry: RSI = addr of str
-;       PUSH addr of length param
-;Exit:  
-;Note:  String should be ended by '$' 
-;Destr: RAX RBX RDI
-;------------------------------------------------
-Strlen:	
-                push rbp
-                mov rbp, rsp
-
-				xor rbx, rbx
-                xor rax, rax
-                xor rdi, rdi
-
-.count:		    inc rbx
-				lodsb
-				cmp al, '$'
-				jne .count
-
-                sub rsi, rbx
-				dec rbx
-                mov rdi, [rbp + 16]
-				mov [rdi], bx
-
-                pop rbp
-                ret
 
 
 ;------------------------------------------------
@@ -143,8 +124,6 @@ putChar:
 ;Destr: AX RBX CX RDX RSI
 ;------------------------------------------------
 putStr:         
-                mov rbx, [rbp + 16 + 8*rdi]
-
 .nextSmbl:
                 mov al, [rbx]
                 call putch 
@@ -161,12 +140,124 @@ putStr:
                 ret
 
 
+;------------------------------------------------
+;Insert decimal instead of '%d'
+;
+;Entry: RDI = number of val
+; 
+;Destr: AX RBX CX RDX RSI
+;------------------------------------------------
+decimal:        
+                push rcx
 
+                mov ax, [rbp + 16 + 8*rdi]
+                push dstr
+                call itoa
+                add rsp, 8
+
+                mov rbx, dstr
+
+                pop rcx
+                call putStr
+
+                ret
+
+
+
+
+
+                
+
+;------------------------------------------------
+;Count number of symbols
+;
+;Entry: RSI = addr of str
+;       PUSH addr of length param
+;Exit:  
+;Note:  String should be ended by '$' 
+;Destr: RAX RBX RDI
+;------------------------------------------------
+Strlen:	
+                push rbp
+                mov rbp, rsp
+
+				xor rbx, rbx
+                xor rax, rax
+                xor rdi, rdi
+
+.count:		    inc rbx
+				lodsb
+				cmp al, '$'
+				jne .count
+
+                sub rsi, rbx
+				dec rbx
+                mov rdi, [rbp + 16]
+				mov [rdi], bx
+
+                pop rbp
+                ret
+
+;------------------------------------------------
+;Translate int to string
+;
+;Entry: AX = number
+;       PUSH = addr of str
+;Exit:
+;Note:  Nuber should be < 65536
+;Destr: AX BX CX DX
+;------------------------------------------------
+itoa:
+                push rbp
+                mov rbp, rsp
+
+                mov cx, DIGIT 
+                xor rbx, rbx        
+
+.Continue:      xor dx, dx
+
+                div cx              ; DX = AX mod CX, AX = AX div CX
+                add dx, BIAS        ; from int to char
+
+                mov [tmp + rbx], dl     ; DX < 10 -> DL = DX 
+                inc rbx
+
+                cmp ax, 0
+                jne .Continue
+
+                push rsi
+                push rbx             ; save number of digit in number
+                mov cx, bx          ; initialization of counter (number of digit)
+                xor dx, dx
+                mov rsi, [rbp + 16]
+
+
+.CoupStr:       mov bx, cx
+                dec bx
+                mov al, [tmp + rbx]     ; takes char from temprorary str
+
+                mov bx, dx
+                mov [rsi + rbx], al      ; puts char in DI
+
+                inc dx
+                loop .CoupStr
+
+                pop rbx
+
+                mov al, '$'
+                mov [rsi + rbx], al     ; puts termination symb at the end of str
+
+                pop rsi
+
+                pop rbp
+                ret
 
 section .data
+tmp         db  0, 0, 0, 0, 0, 0
+dstr        db  0, 0, 0, 0, 0, 0 
 pstr:       db  "danya$"
 pstr1:      db  "clown$"
 len         dw  0
-str:        db  "hello %c friend --%s-- %c how %s!!$"
-table:      dq  char, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, string 
+str:        db  "%d hello %c friend --%s-- %c how %d, %s!!$"
+table:      dq  0, char, dec, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, string 
  
