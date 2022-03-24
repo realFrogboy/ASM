@@ -106,26 +106,30 @@ New08           proc
                 push cs
                 pop ds
 
+                xor cx, cx
+                xor di, di
+                call ResidentFrame
+
+                mov bx, (START_TEXT_LINE * LINE + CENTER - 3) * 2
+                dec bx
+
                 mov ax, [bp - 8]
                 mov di, offset RegAX    ; output AX
                 call OutputRegFrame
 
-                START_TEXT_LINE = START_TEXT_LINE + 3
-                START_FRAME_LINE = START_FRAME_LINE + 3
+                add bx, LINE * 2
 
                 mov ax, [bp - 6]
                 mov di, offset RegBX    ; output BX
                 call OutputRegFrame
 
-                START_TEXT_LINE = START_TEXT_LINE + 3
-                START_FRAME_LINE = START_FRAME_LINE + 3
+                add bx, LINE * 2
 
                 mov ax, [bp - 4]
                 mov di, offset RegCX    ; output CX
                 call OutputRegFrame
 
-                START_TEXT_LINE = START_TEXT_LINE + 3
-                START_FRAME_LINE = START_FRAME_LINE + 3
+                add bx, LINE * 2
 
                 mov ax, [bp - 2]
                 mov di, offset RegDX    ; output DX
@@ -206,6 +210,7 @@ ReturnVideo     proc
 ;Destr: AX BX CX DX SI DI
 ;------------------------------------------------
 OutputRegFrame  proc
+                push ax bx cx dx si di bx
 
                 mov si, di
                 push offset Text
@@ -217,11 +222,14 @@ OutputRegFrame  proc
                 push offset Text
                 push offset value
                 call BADStrcat
-                
-                xor cx, cx
-                xor di, di
-                call ResidentFrame
 
+                pop di
+                mov si, offset Text
+                sub di, LEN
+                mov ah, TEXT_COLOR
+                call Printf
+
+                pop di si dx cx bx ax
                 ret
                 endp
 
