@@ -162,8 +162,12 @@ RememberVideo   proc
 		add di, ((START_FRAME_LINE + 1) * LINE + CENTER) * 2
                 sub di, 9 * 2			
 
-                mov cx, 15d
+                mov cx, 6d
                 xor bx, bx
+
+@@nextLine:     
+                push cx
+                mov cx, 15d
 
 @@nextByte:
                 mov ax, es:[di]
@@ -172,6 +176,11 @@ RememberVideo   proc
                 add bx, 2
                 add di, 2
                 loop @@nextByte
+
+                add di, (LINE - 15) * 2
+                pop cx
+
+                loop @@nextLine
 
                 ret
                 endp
@@ -187,8 +196,12 @@ ReturnVideo     proc
 		add di, ((START_FRAME_LINE + 1) * LINE + CENTER) * 2		
                 sub di, 9 * 2		
 
-                mov cx, 15d
+                mov cx, 6d
                 xor bx, bx
+
+@@nextLine:
+                push cx
+                mov cx, 15d
 
 @@nextByte:
                 mov ax, Video + bx
@@ -196,6 +209,11 @@ ReturnVideo     proc
                 add bx, 2
 
                 loop @@nextByte
+
+                add di, (LINE - 15) * 2
+                pop cx
+
+                loop @@nextLine
 
                 ret
                 endp
@@ -376,7 +394,7 @@ Strlen		proc
 
 
 FLAG            db  0
-Video           dw  15 dup (?)
+Video           dw  90 dup (?)
 
 RegAX           db  'AX = $', 5 dup (?)
 RegBX           db  'BX = $', 5 dup (?)
