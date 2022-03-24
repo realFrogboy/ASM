@@ -89,7 +89,9 @@ Old09   dd  0
 ;------------------------------------------------
 
 New08           proc
-                push ax bx cx dx si di es
+                push bp
+                mov bp, sp
+                push si di es ax bx cx dx 
 
                 cmp FLAG, 1
                 jne @@Skip
@@ -104,9 +106,30 @@ New08           proc
                 push cs
                 pop ds
 
-                xor cx, cx
-                xor di, di
-                call ResidentFrame
+                mov ax, [bp - 8]
+                mov di, offset RegAX    ; output AX
+                call OutputRegFrame
+
+                START_TEXT_LINE = START_TEXT_LINE + 3
+                START_FRAME_LINE = START_FRAME_LINE + 3
+
+                mov ax, [bp - 6]
+                mov di, offset RegBX    ; output BX
+                call OutputRegFrame
+
+                START_TEXT_LINE = START_TEXT_LINE + 3
+                START_FRAME_LINE = START_FRAME_LINE + 3
+
+                mov ax, [bp - 4]
+                mov di, offset RegCX    ; output CX
+                call OutputRegFrame
+
+                START_TEXT_LINE = START_TEXT_LINE + 3
+                START_FRAME_LINE = START_FRAME_LINE + 3
+
+                mov ax, [bp - 2]
+                mov di, offset RegDX    ; output DX
+                call OutputRegFrame
 
                 pop ds
 
@@ -116,7 +139,8 @@ New08           proc
                 mov al, 20h
                 out 20h, al
 
-                pop es di si dx cx bx ax
+                pop dx cx bx ax es di si
+                pop bp
 
         db  0eah
 Old08   dd  0
@@ -173,10 +197,189 @@ ReturnVideo     proc
                 endp
 
 ;------------------------------------------------
+;Output the frame with reg
+;
+;Entry: AX = register
+;       DI = addr of Text
+;Exit:  
+;
+;Destr: AX BX CX DX SI DI
+;------------------------------------------------
+OutputRegFrame  proc
+
+                mov si, di
+                push offset Text
+                call Strcpy
+
+                push offset value
+                call PutReginStr
+
+                push offset Text
+                push offset value
+                call BADStrcat
+                
+                xor cx, cx
+                xor di, di
+                call ResidentFrame
+
+                ret
+                endp
+
+;------------------------------------------------
+;Put value of register in string
+;
+;Entry: AX = register
+;       PUSH_1 = addr of str
+;Exit:  
+;
+;Destr: AX BX CX DX
+;------------------------------------------------
+
+PutReginStr     proc
+                push bp
+                mov bp, sp
+                push ax bx cx dx si
+
+                mov si, [bp + 4]
+                mov cx, 4
+                xor bx, bx
+
+@@NextNum:
+                xor dx, dx
+                mov bx, 16
+                div bx
+                cmp dx, 10
+                jb @@Num
+                
+                add dl, 55
+                mov bx, cx
+                dec bx
+                mov si[bx], dl
+
+                jmp @@Continue
+
+@@Num:          
+                add dl, 30h
+                mov bx, cx
+                dec bx
+                mov si[bx], dl
+                
+@@Continue:     loop @@NextNum
+
+                mov al, '$'
+                mov si[4], al
+
+                pop si dx cx bx ax
+                pop bp
+                ret 2
+                endp
+
+;------------------------------------------------
+;Add the insert str at the end of the main str
+;
+;Entry: PUSH_1 = addr of main str
+;       PUSH_2 = addr of insert str
+;Exit:  
+;
+;Destr: AX BX CX DX
+;------------------------------------------------
+
+BADStrcat       proc
+                push bp
+                mov bp, sp
+                push ax bx cx si di
+
+                mov si, [bp + 6]
+                mov di, [bp + 4]
+
+                mov cx, 5
+                xor bx, bx
+
+@@PutSmbl:      
+                mov al, di[bx]
+                mov si[5 + bx], al
+                inc bx
+                loop @@PutSmbl
+
+                pop di si cx bx ax
+                pop bp
+                ret 4
+                endp
+
+;------------------------------------------------
+;Copy string from SI
+;
+;Entry: SI = addr of str
+;Exit:  COPY
+;Note:  String should be ended by '$' 
+;Destr: AL BX CX
+;------------------------------------------------
+Strcpy	        proc
+                push bp
+                mov bp, sp 
+
+                push offset LEN
+		call Strlen
+
+                mov di, [bp + 4]
+
+                mov cx, LEN
+                inc cx              ; need to put '$' at the end of copystr
+                mov bx, cx
+
+@@Copy:         dec bx
+                mov al, si[bx] 
+                mov di[bx], al
+		loop @@Copy
+
+                pop bp
+                ret 2
+                endp
+
+
+;------------------------------------------------
+;Count number of symbolss
+;
+;Entry: SI = addr of str
+;Exit:  LEN
+;Note:  String should be ended by '$' 
+;Destr: AL BX DI
+;------------------------------------------------
+Strlen		proc
+                push bp
+                mov bp, sp
+
+                xor bx, bx
+
+@@Count:	inc bx
+                lodsb
+                cmp al, '$'
+                jne @@Count
+
+                sub si, bx
+                dec bx
+                mov di, [bp + 4]
+                mov word ptr [di], bx
+
+                pop bp
+                ret 2
+                endp
+
+
 
 FLAG            db  0
 Video           dw  15 dup (?)
-Text            db  'helloq$'
+
+RegAX           db  'AX = $', 5 dup (?)
+RegBX           db  'BX = $', 5 dup (?)
+RegCX           db  'CX = $', 5 dup (?)
+RegDX           db  'DX = $', 5 dup (?)
+
+value           db  5 dup (?)
+Text            db  10 dup (?)
+
+LEN             dw  ?
+
 
 EOP:
 end             start
