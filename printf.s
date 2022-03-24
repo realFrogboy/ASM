@@ -254,32 +254,7 @@ Continue:       xor rdx, rdx
                 jmp convert
 
 hexNotation:         
-                mov rdi, [hexTbl + (rdx - 10) * 8]
-                jmp rdi
-
-putA:
-                mov dl, 'A' 
-                jmp convert
-
-putB:
-                mov dl, 'B' 
-                jmp convert
-
-putC:
-                mov dl, 'C' 
-                jmp convert
-
-putD:
-                mov dl, 'D' 
-                jmp convert
-
-putE:
-                mov dl, 'E' 
-                jmp convert
-
-putF:
-                mov dl, 'F' 
-
+                mov dl, [hexTbl + (rdx - 10)]
 
 convert:                
                 mov [tmp + rbx], dl     ; DX < 10 -> DL = DX 
@@ -325,4 +300,4 @@ pstr1:      db  "clown$"
 len         dw  0
 str:        db  "%% %x hello %c friend %% --%s-- %c how %d, %s!!EXAPLE%%: %d, oct - %o, bin - %b, hex - %x$"
 table:      dq  bin, char, dec, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, oct, 0, 0, 0, string, 0, 0, 0, 0, hexdec 
-hexTbl:     dq  putA, putB, putC, putD, putE, putF
+hexTbl:     db  "A", "B", "C", "D", "E", "F"
