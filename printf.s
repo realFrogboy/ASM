@@ -1,30 +1,22 @@
 BIAS    equ 48d  
 
+
 section .text
 
-                global _start
+                global printfAsm
 
-_start:
-                push 7235
-                push 7235
-                push 7235
-                push 7235
-                push pstr
-                push 5678
-                push 'k'
-                push pstr1
-                push 't'
-                push 7568
-                push str
-                call printf
-                add rsp, 88
+printfAsm:
+                pop r14
 
-                mov rax, 0x3c
-                xor rdi, rdi
-                syscall
+                push r9
+                push r8
+                push rcx
+                push rdx
+                push rsi        
+                push rdi
 
+                push r14
 
-printf:
                 push rbp
                 mov rbp, rsp
 
@@ -160,7 +152,7 @@ putStr:
 
                 inc rbx
 
-                mov al, '$'
+                mov al, 0
                 cmp [rbx], al
                 jne .nextSmbl
 
@@ -214,7 +206,7 @@ Strlen:
 
 .count:		    inc rbx
 				lodsb
-				cmp al, '$'
+				cmp al, 0
 				jne .count
 
                 sub rsi, rbx
@@ -246,15 +238,7 @@ itoa:
 Continue:       xor rdx, rdx
 
                 div rcx              ; DX = AX mod CX, AX = AX div CX
-
-                cmp rdx, 9
-                ja hexNotation
-
-                add rdx, BIAS        ; from int to char
-                jmp convert
-
-hexNotation:         
-                mov dl, [hexTbl + (rdx - 10)]
+                mov dl, [numTbl + rdx]
 
 convert:                
                 mov [tmp + rbx], dl     ; DX < 10 -> DL = DX 
@@ -282,7 +266,7 @@ convert:
 
                 pop rbx
 
-                mov al, '$'
+                mov al, 0
                 mov [rsi + rbx], al     ; puts termination symb at the end of str
 
                 pop rsi
@@ -295,9 +279,12 @@ convert:
 section .data
 tmp         db  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 
 dstr        db  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 
-pstr:       db  "danya$"
-pstr1:      db  "clown$"
+pstr:       db  "danya\0"
+pstr1:      db  "clown\0"
 len         dw  0
-str:        db  "%% %x hello %c friend %% --%s-- %c how %d, %s!!EXAPLE%%: %d, oct - %o, bin - %b, hex - %x$"
+str:        db  "%% %x hello %c friend %% --%s-- %c how %d, %s!!EXAPLE%%: %d, oct - %o, bin - %b, hex - %x\0"
+
+test:       db  "Maratic lox\0"
 table:      dq  bin, char, dec, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, oct, 0, 0, 0, string, 0, 0, 0, 0, hexdec 
 hexTbl:     db  "A", "B", "C", "D", "E", "F"
+numTbl      db "0123456789ABCDEF"
